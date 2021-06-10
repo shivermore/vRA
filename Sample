@@ -1,0 +1,367 @@
+# *************************************************************************
+# 
+# This WordPress blueprint is enhanced with comments to explain its 
+# parameters.
+# 
+# Try cloning it and experimenting with its YAML code. If you're new to 
+# YAML, visit yaml.org for general information.
+# 
+# The blueprint deploys a minimum of 3 virtual machines and runs scripts 
+# to install packages. 
+# 
+# *************************************************************************
+# 
+# ------------------------------------------------------------------------
+# Blueprints need a descriptive name and version if
+# source controlled in git.
+# ------------------------------------------------------------------------
+name: WordPress Blueprint with Comments
+formatVersion: 1
+version: 1
+#
+# ------------------------------------------------------------------------
+# Inputs create user selections that appear at deployment time. Inputs 
+# can set placement decisions and configurations, and are referenced 
+# later, by the resources section.
+# ------------------------------------------------------------------------
+inputs:
+# 
+# ------------------------------------------------------------------------
+# Choose a cloud endpoint. 'Title' is the visible 
+# option text (oneOf allows for the friendly title). 'Const' is the 
+# tag that identifies the endpoint, which was set up earlier, under the 
+# Cloud Assembly Infrastructure tab.
+# ------------------------------------------------------------------------
+  platform:
+    type: string
+    title: Deploy to
+    oneOf:
+      - title: AWS
+        const: aws
+      - title: Azure
+        const: azure
+      - title: vSphere
+        const: vsphere
+    default: vsphere
+# 
+# ------------------------------------------------------------------------
+# Choose the operating system. Note that the Cloud Assembly
+# Infrastructure must also have an AWS, Azure, and vSphere Ubuntu image 
+# mapped. In this case, enum sets the option that you see, meaning there's
+# no friendly title feature this time. Also, only Ubuntu is available 
+# here, but having this input stubbed in lets you add more operating
+# systems later. 
+# ------------------------------------------------------------------------
+  osimage:
+    type: string
+    title: Operating System
+    description: Which OS to use
+    enum:
+      - Ubuntu
+# 
+# ------------------------------------------------------------------------
+# Set the number of machines in the database cluster. Small and large 
+# correspond to 1 or 2  machines, respectively, which you see later,
+# down in the resources section. 
+# ------------------------------------------------------------------------
+  dbenvsize:
+    type: string
+    title: Database cluster size
+    enum:
+      - Small
+      - Large
+# 
+# ------------------------------------------------------------------------
+# Dynamically tag the machines that will be created. The 
+# 'array' of objects means you can create as many key-value pairs as 
+# needed. To see how array input looks when it's collected,
+# open the blueprint and click TEST.
+# ------------------------------------------------------------------------
+  Mtags:
+    type: array
+    title: Tags
+    description: Tags to apply to machines
+    items:
+      type: object
+      properties:
+        key:
+          type: string
+          title: Key
+        value:
+          type: string
+          title: Value
+# 
+# ------------------------------------------------------------------------
+# Create machine credentials. These credentials are needed in
+# remote access configuration later, in the resources section.
+# ------------------------------------------------------------------------
+  username:
+    type: string
+    minLength: 4
+    maxLength: 20
+    pattern: '[a-z]+'
+    title: Database Username
+    description: Database Username
+  userpassword:
+    type: string
+    pattern: '[a-z0-9A-Z@#$]+'
+    encrypted: true
+    title: Database Password
+    description: Database Password
+# 
+# ------------------------------------------------------------------------
+# Set the database storage disk size.
+# ------------------------------------------------------------------------
+  databaseDiskSize:
+    type: number
+    default: 4
+    maximum: 10
+    title: MySQL Data Disk Size
+    description: Size of database disk
+# 
+# ------------------------------------------------------------------------
+# Set the number of machines in the web cluster. Small, medium, and large 
+# correspond to 2, 3, and 4 machines, respectively, which you see later,
+# in the WebTier part of the resources section.
+# ------------------------------------------------------------------------
+  clusterSize:
+    type: string
+    enum:
+      - small
+      - medium
+      - large
+    title: Wordpress Cluster Size
+    description: Wordpress Cluster Size
+# 
+# ------------------------------------------------------------------------
+# Set the archive storage disk size.
+# ------------------------------------------------------------------------
+  archiveDiskSize:
+    type: number
+    default: 4
+    maximum: 10
+    title: Wordpress Archive Disk Size
+    description: Size of Wordpress archive disk
+#
+# ------------------------------------------------------------------------
+# The resources section configures the deployment of machines, disks, 
+# networks, and other objects. In several places, the code pulls from 
+# the preceding interactive user inputs.
+# ------------------------------------------------------------------------
+resources:
+# 
+# ------------------------------------------------------------------------
+# Create the database server. Choose a cloud agnostic machine 'type' so
+# that it can deploy to AWS, Azure, or vSphere. Then enter its property 
+# settings.
+# ------------------------------------------------------------------------
+  DBTier:
+    type: Cloud.Machine
+    properties:
+# 
+# ------------------------------------------------------------------------
+# Descriptive name for the virtual machine. Does not become the hostname 
+# upon deployment. 
+# ------------------------------------------------------------------------
+      name: mysql
+# 
+# ------------------------------------------------------------------------
+# Hard-coded operating system image to use. To pull from user input above,
+# enter the following instead. 
+# image: '${input.osimage}' 
+# ------------------------------------------------------------------------
+      image: Ubuntu
+# 
+# ------------------------------------------------------------------------
+# Hard-coded capacity to use. Note that the Cloud Assembly 
+# Infrastructure must also have AWS, Azure, and vSphere flavors 
+# such as small, medium, and large mapped. 
+# ------------------------------------------------------------------------
+      flavor: small
+# 
+# ------------------------------------------------------------------------
+# Tag the database machine to deploy to the cloud vendor chosen from the 
+# user input. Tags are case-sensitive, so 'to_lower' forces the tag to 
+# lowercase to ensure a match with a site's tagging convention. It's 
+# important if platform input were to contain any upper case characters.
+# ------------------------------------------------------------------------
+      constraints:
+        - tag: '${"env:" + to_lower(input.platform)}'
+# 
+# ------------------------------------------------------------------------
+# Also tag the database machine with any free-form tags that were created 
+# during user input. 
+# ------------------------------------------------------------------------
+      tags: '${input.Mtags}'
+# 
+# ------------------------------------------------------------------------
+# Set the database cluster size by referencing the dbenvsize user 
+# input. Small is one machine, and large defaults to two. 
+# ------------------------------------------------------------------------
+      count: '${input.dbenvsize == "Small" ? 1 : 2}' 
+# 
+# ------------------------------------------------------------------------
+# Add a variable to connect the machine to a network resource based on 
+# a property binding to another resource. In this case, it's the 
+# 'WP_Network' network that gets defined further below.
+# ------------------------------------------------------------------------
+      networks:
+        - name: '${resource.WP_Network.name}'
+          network: '${resource.WP_Network.id}'
+# 
+# ------------------------------------------------------------------------
+# Enable remote access to the database server. Reference the credentials 
+# from the user input. 
+# ------------------------------------------------------------------------
+      remoteAccess:
+        authentication: usernamePassword
+        username: '${input.username}'
+        password: '${input.userpassword}'
+# 
+# ------------------------------------------------------------------------
+# You are free to add custom properties, which might be used to initiate 
+# an extensiblity subscription, for example. 
+# ------------------------------------------------------------------------
+      ABC-Company-ID: 9393 
+# 
+# ------------------------------------------------------------------------
+# Run OS commands or scripts to further configure the database machine, 
+# via operations such as setting a hostname, generating SSH private keys,
+# or installing packages.
+# ------------------------------------------------------------------------
+      cloudConfig: |
+        #cloud-config
+        repo_update: true
+        repo_upgrade: all
+        packages:
+         - mysql-server
+        runcmd:
+         - sed -e '/bind-address/ s/^#*/#/' -i /etc/mysql/mysql.conf.d/mysqld.cnf
+         - service mysql restart
+         - mysql -e "GRANT ALL PRIVILEGES ON *.* TO 'root'@'%' IDENTIFIED BY 'mysqlpassword';"
+         - mysql -e "FLUSH PRIVILEGES;"
+      attachedDisks: []
+# 
+# ------------------------------------------------------------------------
+# Create the web server. Choose a cloud agnostic machine 'type' so that it
+# can deploy to AWS, Azure, or vSphere. Then enter its property settings.
+# ------------------------------------------------------------------------
+  WebTier:
+    type: Cloud.Machine
+    properties:
+# 
+# ------------------------------------------------------------------------
+# Descriptive name for the virtual machine. Does not become the hostname 
+# upon deployment. 
+# ------------------------------------------------------------------------
+      name: wordpress
+# 
+# ------------------------------------------------------------------------
+# Hard-coded operating system image to use. To pull from user input above,
+# enter the following instead:
+# image: '${input.osimage}' 
+# ------------------------------------------------------------------------
+      image: Ubuntu
+# 
+# ------------------------------------------------------------------------
+# Hard-coded capacity to use. Note that the Cloud Assembly
+# Infrastructure must also have AWS, Azure, and vSphere flavors 
+# such as small, medium, and large mapped.
+# ------------------------------------------------------------------------
+      flavor: small 
+# 
+# ------------------------------------------------------------------------
+# Set the web server cluster size by referencing the clusterSize user 
+# input. Small is 2 machines, medium is 3, and large defaults to 4. 
+# ------------------------------------------------------------------------
+      count: '${input.clusterSize== "small" ? 2 : (input.clusterSize == "medium" ? 3 : 4)}'
+# 
+# ------------------------------------------------------------------------
+# Set an environment variable to display object information under the 
+# Properties tab, post-deployment. Another example might be 
+# {env.blueprintID} 
+# ------------------------------------------------------------------------
+      tags:
+        - key: cas.requestedBy
+          value: '${env.requestedBy}' 
+# 
+# ------------------------------------------------------------------------
+# You are free to add custom properties, which might be used to initiate 
+# an extensiblity subscription, for example. 
+# ------------------------------------------------------------------------
+      ABC-Company-ID: 9393 
+# 
+# ------------------------------------------------------------------------
+# Tag the web server to deploy to the cloud vendor chosen from the 
+# user input. Tags are case-sensitive, so 'to_lower' forces the tag to 
+# lowercase to ensure a match with your site's tagging convention. It's 
+# important if platform input were to contain any upper case characters.
+# ------------------------------------------------------------------------
+      constraints:
+        - tag: '${"env:" + to_lower(input.platform)}' 
+# 
+# ------------------------------------------------------------------------
+# Add a variable to connect the machine to a network resource based on 
+# a property binding to another resource. In this case, it's the 
+# 'WP_Network' network that gets defined further below.
+# ------------------------------------------------------------------------
+      networks:
+        - name: '${resource.WP_Network.name}'
+          network: '${resource.WP_Network.id}'
+# 
+# ------------------------------------------------------------------------
+# Run OS commands or scripts to further configure the web server, 
+# with operations such as setting a hostname, generating SSH private keys,
+# or installing packages.
+# ------------------------------------------------------------------------
+      cloudConfig: |
+        #cloud-config
+        repo_update: true
+        repo_upgrade: all
+        packages:
+          - apache2
+          - php
+          - php-mysql
+          - libapache2-mod-php
+          - php-mcrypt
+          - mysql-client
+        runcmd:
+          - mkdir -p /var/www/html/mywordpresssite && cd /var/www/html && wget https://wordpress.org/latest.tar.gz && tar -xzf /var/www/html/latest.tar.gz -C /var/www/html/mywordpresssite --strip-components 1
+          - i=0; while [ $i -le 5 ]; do mysql --connect-timeout=3 -h ${DBTier.networks[0].address} -u root -pmysqlpassword -e "SHOW STATUS;" && break || sleep 15; i=$((i+1)); done
+          - mysql -u root -pmysqlpassword -h ${resource.DBTier.networks[0].address} -e "create database wordpress_blog;"
+          - mv /var/www/html/mywordpresssite/wp-config-sample.php /var/www/html/mywordpresssite/wp-config.php
+          - sed -i -e s/"define('DB_NAME', 'database_name_here');"/"define('DB_NAME', 'wordpress_blog');"/ /var/www/html/mywordpresssite/wp-config.php && sed -i -e s/"define('DB_USER', 'username_here');"/"define('DB_USER', 'root');"/ /var/www/html/mywordpresssite/wp-config.php && sed -i -e s/"define('DB_PASSWORD', 'password_here');"/"define('DB_PASSWORD', 'mysqlpassword');"/ /var/www/html/mywordpresssite/wp-config.php && sed -i -e s/"define('DB_HOST', 'localhost');"/"define('DB_HOST', '${resource.DBTier.networks[0].address}');"/ /var/www/html/mywordpresssite/wp-config.php
+          - service apache2 reload
+# 
+# ------------------------------------------------------------------------
+# Create the network that the database and web servers connect to. 
+# Choose a cloud agnostic network 'type' so that it can deploy to AWS, 
+# Azure, or vSphere. Then enter its property settings.
+# ------------------------------------------------------------------------
+  WP_Network:
+    type: Cloud.Network
+    properties:
+# 
+# ------------------------------------------------------------------------
+# Descriptive name for the network. Does not become the network name 
+# upon deployment. 
+# ------------------------------------------------------------------------
+      name: WP_Network
+# 
+# ------------------------------------------------------------------------
+# Set the networkType to an existing network. You could also use a 
+# constraint tag to target a specific, like-tagged network. 
+# The other network types are private or public.
+# ------------------------------------------------------------------------
+      networkType: existing
+# 
+# ************************************************************************
+# 
+# VMware hopes that you found this commented blueprint useful. Note that 
+# you can also access an API to create blueprints, or query for input 
+# schema that you intend to request. See the following Swagger 
+# documentation.
+# 
+# www.mgmt.cloud.vmware.com/blueprint/api/swagger/swagger-ui.html
+# 
+# ************************************************************************
