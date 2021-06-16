@@ -1,0 +1,77 @@
+formatVersion: 1
+inputs:
+  cloud:
+    type: string
+    title: Cloud Endpoint
+    oneof:
+      - title: AWS
+      const: 'platform:aws'
+      - title: vSphere
+      const: 'platform:vsphere'
+  networkZone:
+    type: string
+    title: Network Zone
+    description: Choose the placement Network Zone
+    default: 'networkZone:private'
+    enum:
+      - 'networkZone:private'
+      - 'networkZone:public'
+  diskCapacity:
+    type: integer
+    title: Disk Capacity
+    minimum: 1
+    maximum: 100
+    default: 10
+  image:
+    type: string
+    title: OS Image
+    enum:
+      - CentOS
+      - Windows2019
+  tags:
+    type: array
+    title: Machine Tags
+    description: tags that will be added to the machines
+    items:
+      type: object
+      properties:
+        key:
+          type: string
+          title: key
+        value:
+          type: string
+          title: value
+  username:
+    type: string
+    title: User Name
+    pattern: '[a-zA-Z]+'
+  password:
+    type: string
+    title: Password
+    encrypted: true
+resources:
+  Cloud_Network_1:
+    type: Cloud.Network
+    properties:
+      networkType: existing
+      constraints:
+        - tag: '${input.networkZone}'
+  Cloud_Machine_1:
+    type: Cloud.Machine
+    properties:
+      tags: '${input.tags}'
+      image: '${input.image}'
+      flavor: small
+      constraints:
+        - tag: '${input.cloud}'
+      networks:
+        - network: '${resource.Cloud_Network_1.id}'
+      attachedDisks:
+        - source: '${resource.Cloud_volume_1.id}'
+      cloudConfig: |
+        runcmd:
+          - sudo yum install git -y
+  Cloud_Volume_1:
+    type: Cloud.Volume
+    properties:
+      capacityGb: '${input.diskCapacity}'
