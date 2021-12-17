@@ -1,0 +1,60 @@
+formatVersion: 1
+inputs: {}
+resources:
+  HIGH-NET:
+    type: Cloud.NSX.Network
+    properties:
+      networkType: existing
+      constraints:
+        - tag: HIGH-SVR
+  srv-h-a1:
+    type: Cloud.vSphere.Machine
+    properties:
+      name: srv-h-a1.high.home.lab
+      image: cloud-init-log-2
+      flavor: small
+      networks:
+        - network: '${resource["HIGH-NET"].id}'
+          assignment: static
+      cloudConfig: |
+        #cloud-config
+        runcmd:
+        # enable files to be transferred between server 2016 machines
+        - reg add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /v LocalAccountTokenFilterPolicy /t REG_DWORD /d 1 /f
+        # create entries in local hosts file
+        - echo ${srv-h-a1.networks[0].address}  ${resource["srv-h-a1"].name}  netsvr1 srv-h-a1  ciHigh >> C:\windows\system32\drivers\etc\hosts
+        # MWNS install
+        - <command line stuff specific to MWNS>
+  srv-h-a2:
+    type: Cloud.vSphere.Machine
+    properties:
+      name: srv-h-a2.high.home.lab
+      image: cloud-init-log-2
+      flavor: small
+      networks:
+        - network: '${resource["HIGH-NET"].id}'
+          assignment: static
+      cloudConfig: |
+        #cloud-config
+        write_files:
+          content: |
+            $File = "${secret.PS1_Hash}"
+            [Byte[]] $key = (${secret.PS1_Key})
+            $passwd = $File | Convert-to-SecureString -key $key
+            $Username = "${secret.username}"
+            $Cred = New-Object System.Management.Automation.PSCredential ($Username, $Passwd)
+            $Dest1 = "\\${srv-h-a1.networks[0].address}\c$\windows\system32\drivers\etc"
+            New-PSDrive -name J -PSProvider FileSystem -Root $Dest1 -Credential $Cred
+            copy-item -path "c:\windows\system32\drivers\etc\hosts" -destination $Dest1 -force
+          path: c:\test.ps1
+        runcmd:
+        # enable files to be transferred between server 2016 machines
+        - reg add HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System /v LocalAccountTokenFilterPolicy /t REG_DWORD /d 1 /f
+        # create entries in local hosts file
+        - echo ${srv-h-a2.networks[0].address}  ${resource["srv-h-a2"].name}  netsvr2 srv-h-a2  ciHigh >> C:\windows\system32\drivers\etc\hosts
+        - echo ${srv-h-a1.networks[0].address}  ${resource["srv-h-a1"].name}  netsvr1 srv-h-a1  ciHigh >> C:\windows\system32\drivers\etc\hosts
+        - echo 1.1.1.1  mwns.domain1.home.lab >> C:\windows\system32\drivers\etc\hosts
+        # copy hosts file from a2 to a1 using a powershell script then delete the script
+         - powershell.exe c:\test.ps1 && del c:\test.ps1 /F
+         # MWNS install
+         - <command line stuff specific to MWNS>
