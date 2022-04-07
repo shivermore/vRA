@@ -1,0 +1,31 @@
+formatVersion: 1
+name: AnsibleTower-Example-Do-NOT-MODIFY
+version: 1
+inputs: {}
+resources:
+  Cloud_Ansible_Tower_1:
+    type: Cloud.Ansible.Tower
+    properties:
+      host: '${resource.Cloud_Machine_1.*}'
+      account: Ansible Tower
+      jobTemplates:
+        provision:
+          - Hello World
+      hostVariables: |
+        example_var: 123
+      maxConnectionRetries: 10
+  Cloud_Machine_1:
+    type: Cloud.Machine
+    properties:
+      image: CentOS
+      flavor: small
+      networks:
+        - network: '${resource.Cloud_vSphere_Network_1.id}'
+      constraints:
+        - tag: 'env:vsphere'
+  Cloud_vSphere_Network_1:
+    type: Cloud.vSphere.Network
+    properties:
+      networkType: existing
+      constraints:
+        - tag: 'env:vsphere'
