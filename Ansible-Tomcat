@@ -1,0 +1,54 @@
+# This blueprint will deploy a linux machine and install Tomcat on it. You can deploy to AWS or vSphere. Once the machine is deployed copy/paste the IP address into a browser to see the tomcat landing page.
+formatVersion: 1
+name: Ansible-Tomcat-Do-NOT-Modify
+version: 1
+inputs:
+  Playbooks:
+    type: string
+    enum:
+      - /etc/ansible/playbooks/tomcatandjava.yml
+  machinename:
+    type: string
+  SelectCloud:
+    type: string
+    title: Select Cloud
+    oneOf:
+      - title: AWS
+        const: 'env:aws'
+      - title: vSphere
+        const: 'env:vsphere'
+resources:
+  Cloud_Ansible_1:
+    type: Cloud.Ansible
+    properties:
+      host: '${resource.Cloud_Machine_1.*}'
+      osType: linux
+      account: Field Demo Ansible OSS
+      username: root
+      privateKeyFile: /root/.ssh/id_rsa
+      playbooks:
+        provision:
+          - '${input.Playbooks}'
+      inventoryFile: /etc/ansible/hosts
+      maxConnectionRetries: 10
+      hostVariables: |
+        ansible_python_interpreter: ${input.SelectCloud == "env:aws" ? "/usr/bin/python" : ""}
+  Cloud_Machine_1:
+    type: Cloud.Machine
+    properties:
+      image: CentOS
+      flavor: small
+      tags:
+        - key: source
+          value: ansible
+      networks:
+        - network: '${resource.Cloud_Network_1.id}'
+          assignPublicIpAddress: '${input.SelectCloud == "env:aws" ? true : false}'
+      constraints:
+        - tag: '${input.SelectCloud}'
+  Cloud_Network_1:
+    type: Cloud.Network
+    properties:
+      networkType: existing
+      constraints:
+        - tag: '${input.SelectCloud}'
