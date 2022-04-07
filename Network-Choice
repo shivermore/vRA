@@ -1,0 +1,50 @@
+formatVersion: 1
+name: Network-Choice-Do-NOT-Modify
+version: 1
+inputs:
+  network:
+    type: string
+    enum:
+      - App
+      - Web
+    default: App
+resources:
+  Web:
+    type: Cloud.vSphere.Machine
+    properties:
+      image: Ubuntu-18
+      flavor: medium
+      tags:
+        - key: web
+          value: apache
+      networks:
+        - network: '${resource.NSX.id}'
+          tags:
+            - key: web
+              value: apache
+      constraints:
+        - tag: 'env:vsphere'
+  NSX:
+    type: Cloud.NSX.Network
+    properties:
+      networkType: existing
+      constraints:
+        - tag: '${"net:" + to_lower(input.network)}'
+      tags:
+        - key: web
+          value: apache-mysql
+  DB:
+    type: Cloud.vSphere.Machine
+    properties:
+      image: Ubuntu-18
+      flavor: medium
+      tags:
+        - key: db
+          value: mysql
+      networks:
+        - network: '${resource.NSX.id}'
+          tags:
+            - key: db
+              value: mysql
+      constraints:
+        - tag: 'env:vsphere'
