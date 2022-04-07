@@ -1,0 +1,46 @@
+################################################################################################
+# This Blueprint will deploy a Linux vSphere Machine and then create a folder
+# Once deployed then you will see a custom day 2 action on the machine "Move Folder", you can choose
+# folder name = mycrfolder. This demonstrates Custom Resource and Resource Action capabilities
+################################################################################################
+formatVersion: 1
+name: Custom Resource and Action Example - DO NOT MODIFY
+version: 1
+inputs:
+  MachineName:
+    type: string
+  foldername:
+    type: string
+    title: FolderName
+  parentfolder:
+    type: object
+    title: Parent Folder
+    $data: 'vro/data/inventory/VC:VmFolder'
+    properties:
+      id:
+        type: string
+      type:
+        type: string
+resources:
+  Custom_CreateFolder_1:
+    type: Custom.CreateFolder
+    properties:
+      name: '${input.foldername}'
+      parentFolder: '${input.parentfolder}'
+  Cloud_vSphere_Machine_1:
+    type: Cloud.vSphere.Machine
+    properties:
+      image: CentOS
+      cpuCount: 1
+      totalMemoryMB: 1024
+      networks:
+        - network: '${resource.Cloud_Network_1.id}'
+      constraints:
+        - tag: 'env:vsphere'
+      newName: '${input.MachineName}'
+  Cloud_Network_1:
+    type: Cloud.vSphere.Network
+    properties:
+      networkType: existing
+      constraints:
+        - tag: 'env:vsphere'
