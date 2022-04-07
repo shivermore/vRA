@@ -1,0 +1,58 @@
+formatVersion: 1
+name: SaltStack-Demo-Template
+version: 1
+inputs:
+  hostname:
+    type: string
+  user:
+    type: string
+    default: demouser
+  password:
+    type: string
+    default: vRealiz3!
+    encrypted: true
+resources:
+  Cloud_Machine_1:
+    type: Cloud.Machine
+    properties:
+      image: Ubuntu-18
+      flavor: medium
+      newName: '${input.hostname}'
+      cloudConfig: |
+        #cloud-config
+        hostname: oc-cool-${input.hostname}
+
+        users:
+          - name: ${input.user}
+            sudo: ['ALL=(ALL) NOPASSWD:ALL']
+            groups: sudo
+            shell: /bin/bash
+
+        runcmd:
+          - sudo systemctl stop apt-daily.service
+          - sudo systemctl stop apt-daily-upgrade.service
+          - sudo systemctl disable apt-daily.service
+          - sudo systemctl disable apt-daily.timer
+          - sudo systemctl disable apt-daily-upgrade.timer
+          - sudo systemctl disable apt-daily-upgrade.service
+          - sudo systemctl daemon-reload
+          - PASS=${input.password}
+          - USER=${input.user}
+          - echo $USER:$PASS | /usr/sbin/chpasswd
+          - sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/g" /etc/ssh/sshd_config
+          - service ssh reload
+          - curl -L https://bootstrap.saltstack.com -o install_salt.sh
+          - sudo sh install_salt.sh -A ${propgroup.SaltStackConfiguration.masterAddress}
+          - sudo salt-call grains.set application opencart
+      networks:
+        - network: '${resource.Cloud_Network_1.id}'
+      constraints:
+        - tag: 'env:vsphere'
+      remoteAccess:
+        authentication: publicPrivateKey
+  Cloud_Network_1:
+    type: Cloud.Network
+    properties:
+      networkType: existing
+      constraints:
+        - tag: 'env:vsphere'
