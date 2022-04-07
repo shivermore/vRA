@@ -1,0 +1,84 @@
+name: Salt Environment
+version: 1
+formatVersion: 1
+inputs:
+  user:
+    type: string
+    title: Username for SSH
+    description: The username you would like to have for the installation.
+    default: demouser
+  password:
+    type: string
+    pattern: '[a-z0-9A-Z@#$]+'
+    encrypted: true
+    default: VMware1!
+    title: Admin Account Password
+    description: The password you would like to use for the System.
+  saltmasterhostname:
+    type: string
+    title: Salt Master Hostname
+  saltminionhostname:
+    type: string
+    title: Salt Minion Hostname
+resources:
+  Salt-Minion:
+    type: Cloud.Machine
+    dependsOn:
+      - Salt-Master
+    properties:
+      image: Ubuntu-18
+      flavor: medium
+      constraints:
+        - tag: 'env:vsphere'
+      cloudConfig: |
+        #cloud-config
+        hostname: ${input.saltminionhostname}
+
+        users:
+          - name: ${input.user}
+            sudo: ['ALL=(ALL) NOPASSWD:ALL']
+            groups: sudo
+            shell: /bin/bash
+
+        runcmd:
+          - PASS=${input.password}
+          - USER=${input.user}
+          - echo $USER:$PASS | /usr/sbin/chpasswd
+          - sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/g" /etc/ssh/sshd_config
+          - service ssh reload
+          - curl -L https://bootstrap.saltstack.com -o install_salt.sh
+          - sudo sh install_salt.sh -A ${resource.Salt-Master.address}
+      networks:
+        - network: '${resource.Cloud_Network_1.id}'
+  Salt-Master:
+    type: Cloud.Machine
+    properties:
+      image: Ubuntu-18
+      flavor: medium
+      constraints:
+        - tag: 'env:vsphere'
+      cloudConfig: |
+        #cloud-config
+        hostname: ${input.saltmasterhostname}
+        users:
+          - name: ${input.user}
+            sudo: ['ALL=(ALL) NOPASSWD:ALL']
+            groups: sudo
+            shell: /bin/bash
+
+        runcmd:
+          - PASS=${input.password}
+          - USER=${input.user}
+          - echo $USER:$PASS | /usr/sbin/chpasswd
+          - sed -i "s/PasswordAuthentication no/PasswordAuthentication yes/g" /etc/ssh/sshd_config
+          - service ssh reload
+          - curl -L https://bootstrap.saltstack.com -o install_salt.sh
+          - sudo sh install_salt.sh -M
+      networks:
+        - network: '${resource.Cloud_Network_1.id}'
+  Cloud_Network_1:
+    type: Cloud.Network
+    properties:
+      constraints:
+        - tag: 'env:vsphere'
+      networkType: existing
