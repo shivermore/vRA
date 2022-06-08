@@ -1,0 +1,21 @@
+# In some instances, running cloudconfig commands fails on windows boxes due to names not matching.  Here is a sample if/else statement to wait to execute commands until a machine has a name
+
+cloudCondif: |
+  #cloud-config
+  set_hostname: ${cloud_vsphere_machine_1.name}
+  write_files:
+    Content: |
+      if ($env:COMPUTERNAME -like "${cloud_vsphere_machine_1.name}"{
+      new-item -path c:\ -name test -itemtype directory
+      $file = "${secret.ftp_hash}"
+      [byte[]] $key = (${secret.ftp_key})
+      $password = $file | convertto-securestring -key $key
+      $username = "${secret.ftp_user}"
+      $cred = new-object system.management.automation.pscredential ($username, $password)
+      $dest1 = "c:\test"
+      new-psdrive -name J -psprovider filesystem -root "x.x.x.x\share" -crecdential $cred
+      copy-item -path "j:\share\*" -destination $dest1 -force -recurse
+      } else {write-host +++++not renamed yet+++++}
+    path: c:\test.ps1
+  runcmd:
+    - powershell.exe c:\test.ps1 && del c:\test.ps1 /F
