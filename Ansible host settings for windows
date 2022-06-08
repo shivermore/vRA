@@ -7,3 +7,13 @@ ansible_winrm_cert_pem=/home/bryant/cert.pem
 ansible_winrm_cert_key_pem=/home/bryant/key.pem
 ansible_port=5986
 ansible_winrm_scheme=https
+
+
+# winrm cloud config settings for windows servers
+Cloudconfig: |
+  #cloud-config
+  runcmd:
+    - powershell.exe c:\tmp\create_server_cert.ps1
+    - powershell.exe c:\tmp\create_ansible_user.ps1
+    - powershell.exe c:\tmp\create_winrm_listener.ps1
+    - powershell.exe c:\tmp\update_firewall.ps1
