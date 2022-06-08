@@ -1,0 +1,26 @@
+cloud_machine_1:
+  type:cloud.machine
+  properties:
+    saltconfiguration:
+      masterid:  primary
+      minionid: '${input.name}-minion'
+      saltenvironment: windows
+      statefiles:
+        - /ssc/mystatefile.sls
+      variables:
+        username: myname
+    # the username and pw for the account saltstack will use to access the machine
+    remoteaccess:
+      authentication: usernamePassword
+      username: localMachineAdmin
+      password: VMware1!
+      
+      
+----------------------------------
+# statefiles are found in the saltstack master at config/file server/xyz
+# these files can be used by saltstack in vRA similar to playbooks in ansible
+
+config_ad # this name is whatever you want to call it
+  cmd.run:  #below you can specify powershell or bash commands depending on what machine will be executing the commands
+    - cmd: |
+    -powershell command or bash command
