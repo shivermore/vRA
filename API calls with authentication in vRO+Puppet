@@ -1,0 +1,31 @@
+    $environment = $inputs.environment
+    $businessservice = $inputs.businessservice
+    $token = $inputs.puppettoken
+    $headers = @{'X-Authentication' = $token}
+    $uri = "https://puppet.something.com/4433/classifier-api/v1/environments/" + $environment + "/classes"
+   
+ if ($environment) {
+       
+    $result = Invoke-RestMethod -Uri $uri -ContentType application/json -Headers $headers -Method Get -SkipCertificateCheck
+    $role = $result | where-object {$_.name -like 'role::' + $businessservice + '::*'}
+    foreach($roles in $role.name){
+       $role2 = @()
+       $role2 = $role2 + $role.name -Replace 'role::', ""
+       $role2 = $role2 + "" 
+    }
+#currently not using role3 and role4
+   foreach($roles in $role2) {
+       $role3 = $role2 -Replace $businessservice, ""
+    }
+    foreach($roles in $role3) {
+       $role4 = $role3 -Replace '::', ""
+    }
+#end of code not being used   
+    return $role2
+    } else {
+        $a = @()
+        $a = $a + "Please Select a Domain and a Business Service"
+        $a = $a + " "
+        return $a
+  }
+}]]>
