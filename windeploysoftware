@@ -1,0 +1,32 @@
+formatVersion: 1
+inputs: {}
+resources:
+  Cloud_Ansible_1:
+    type: Cloud.Ansible
+    properties:
+      host: '${resource.Cloud_vSphere_Machine_1.*}'
+      osType: windows
+      account: My-Ansible
+      username: administrator
+      password: VMware1!
+      groups:
+        - winservers
+      playbooks:
+        provision:
+          #- /etc/ansible/installNotepadplus.yml
+          - /etc/ansible/winShell.yml
+  Cloud_vSphere_Machine_1:
+    type: Cloud.vSphere.Machine
+    properties:
+      image: winansible
+      flavor: small
+      customizationSpec: win2016
+      networks:
+        - network: '${resource.Cloud_vSphere_Network_1.id}'
+          assignment: static
+  Cloud_vSphere_Network_1:
+    type: Cloud.vSphere.Network
+    properties:
+      networkType: existing
+      constraints:
+        - tag: vlan-10
