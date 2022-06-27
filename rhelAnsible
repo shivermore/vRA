@@ -1,0 +1,31 @@
+formatVersion: 1
+inputs: {}
+resources:
+  Cloud_Ansible_1:
+    type: Cloud.Ansible
+    properties:
+      host: '${resource.Cloud_vSphere_Machine_1.*}'
+      osType: linux
+      account: My-Ansible
+      username: root
+      password: VxR@il123!
+      groups:
+        - rhelServers
+      playbooks:
+        provision:
+          - /etc/ansible/mkdir.yml
+  Cloud_vSphere_Machine_1:
+    type: Cloud.vSphere.Machine
+    properties:
+      image: rhel-template
+      flavor: small
+      customizationSpec: rhel
+      networks:
+        - network: '${resource.Cloud_vSphere_Network_1.id}'
+          assignment: static
+  Cloud_vSphere_Network_1:
+    type: Cloud.vSphere.Network
+    properties:
+      networkType: existing
+      constraints:
+        - tag: vlan-10
