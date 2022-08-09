@@ -1,0 +1,39 @@
+formatVersion: 1
+inputs:
+  CPU:
+    type: string
+    description: The amount of CPUs desired
+    title: CPU
+    default: '1'
+    pattern: '[1-9]{1,2}'
+    minLength: 1
+    maxLength: 2
+  Memory:
+    type: number
+    description: The amount of memory desired
+    title: Memory
+    default: '1024'
+    pattern: '[0-9]{4,4}'
+    minLength: 4
+    maxLength: 4
+resources:
+  Cloud_vSphere_Machine_1:
+    type: Cloud.vSphere.Machine
+    properties:
+      image: win2019-cloudbaseinit
+      cpuCount: '${input.CPU}'
+      totalMemoryMB: '${input.Memory}'
+      cloudConfig: |
+        #cloud-config
+        write_files:
+          content: cloudbase-init test
+          path: c:\test.txt
+      networks:
+        - network: '${resource.Cloud_vSphere_Network_1.id}'
+          assignment: static
+  Cloud_vSphere_Network_1:
+    type: Cloud.vSphere.Network
+    properties:
+      networkType: existing
+      constraints:
+        - tag: vlan-10
