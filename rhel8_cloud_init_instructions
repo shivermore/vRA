@@ -1,6 +1,6 @@
 1. ensure your image deploys with network as expected with a clean image
 2. login to your clean image and create a script.sh in your /home/<user> directory
-3. copy the following file into your script.sh: https://github.com/vmwarelab/cloud-init-scripts/blob/main/build-centos-rhel-vra8-template.sh
+3. copy the following file into your script.sh: https://github.com/vmwarelab/cloud-init-scripts/blob/main/build-centos-rhel-vra8-template-myblog.sh
 4. in the script.sh file change line 12 to be the user account you are logging into the rhel box with
 5. run the following command on your script.sh file to remove carrage returns:
   5a.  #> sed 's/\r$//' script.sh > script.sh
