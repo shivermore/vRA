@@ -1,36 +1,104 @@
 formatVersion: 1
 inputs:
-  CPU:
+  disks:
+    type: array
+    title: disks
+    items:
+      title: disk
+      type: object
+      properties:
+        size:
+          type: integer
+          title: size
+        name:
+          type: string
+          title: name
+    maxItems: 15
+  purpose:
     type: string
-    description: The amount of CPUs desired
+    # The inputs section is where we list out our inputs that the user can choose from at deployment time.
+    title: Select the hosts purpose
+    oneOf:
+      # This particular section lists out the various cloud endpoints that the user can choose from.
+      # The input variable will be referenced in the resources section. Title is what the user sees, const is the tag for the endpoints.
+      - title: Certificate Authority
+        const: CA
+        description: A certificate Authority
+      - title: Clearcube
+        const: CC
+      - title: Domain Controller
+        const: DC
+      - title: Device management
+        const: DM
+    default: CA
+  domain:
+    type: string
+    title: System Domain
+    oneOf:
+      - title: Services
+        const: SVC
+      - title: NRES
+        const: NRS
+      - title: PAX
+        const: PAX
+      - title: NAWCAD
+        const: NAD
+      - title: Not Domain Joined
+        const: NDS
+      - title: Device Management
+        const: DM
+      - title: Epolicy Orchestrator
+        const: EP
+      - title: Fileshare
+        const: FS
+    default: NRS
+  vsyscom:
+    type: string
+    title: vsyscom
+    oneOf:
+      - title: '0752'
+        const: '0752'
+  location:
+    type: string
+    title: Physical Location
+    oneOf:
+      - title: PAX
+        const: PAX
+  cpu:
+    type: integer
     title: CPU
-    default: '1'
-    pattern: '[1-9]{1,2}'
-    minLength: 1
-    maxLength: 2
-  Memory:
-    type: number
-    description: The amount of memory desired
-    title: Memory
-    default: '1024'
-    pattern: '[0-9]{4,4}'
-    minLength: 4
-    maxLength: 4
+    default: 1
+  totalMem:
+    type: integer
+    title: Total Memory (MB)
+    default: 1024
 resources:
   Cloud_vSphere_Machine_1:
     type: Cloud.vSphere.Machine
     properties:
       image: win2019-cloudbaseinit
-      cpuCount: '${input.CPU}'
-      totalMemoryMB: '${input.Memory}'
+      name: '${input.domain}${input.vsyscom}${input.location}${input.purpose}'
+      cpuCount: '${input.cpu}'
+      totalMemoryMB: '${input.totalMem}'
+      remoteAccess:
+        authentication: usernamePassword
+        username: Administrator
+        password: Password1234@$
       cloudConfig: |
-        #cloud-config
-        write_files:
-          content: cloudbase-init test
-          path: c:\test.txt
+        #ps1_sysnative
+        New-Item -path "C:\Powershell-test" -type directory
+        Get-Disk | Where-Object PartitionStyle -Eq "RAW" | Initialize-Disk -PassThru | New-Partition -AssignDriveLetter -UseMaximumSize | Format-Volume
+      attachedDisks: '${map_to_object(resource.Cloud_Volume_1[*].id, "source")}'
+      ignoreActiveDirectory: 'true'
       networks:
         - network: '${resource.Cloud_vSphere_Network_1.id}'
           assignment: static
+  Cloud_Volume_1:
+    type: Cloud.vSphere.Disk
+    allocatePerInstance: true
+    properties:
+      capacityGb: '${input.disks[count.index].size}'
+      count: '${length(input.disks)}'
   Cloud_vSphere_Network_1:
     type: Cloud.vSphere.Network
     properties:
