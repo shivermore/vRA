@@ -1,0 +1,6 @@
+To get Infoblox to properly distribute IPs you must add the following "Custom properties" at the project level
+
+Name: Infoblox.IPAM.Network.dnsView
+Value: Internal Network
+
+The value needs to match the default name of ip/dns zone as listed in Infoblox ... Internal Network should be the default.
