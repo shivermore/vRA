@@ -1,0 +1,31 @@
+formatVersion: 1
+inputs:
+  ou:
+    type: object
+    title: AD OU Container
+    $data: 'vro/data/inventory/AD:OrganizationalUnit'
+    properties:
+      id:
+        type: string
+      type:
+        type: string
+  accountName:
+    type: string
+    title: Account Name
+  displayName:
+    type: string
+    title: Display Name
+  password:
+    type: string
+    title: Password
+    encrypted: true
+resources:
+  'Custom_AD:User_1':
+    type: 'Custom.AD:User'
+    properties:
+      accountName: '${input.accountName}'
+      displayName: '${input.displayName}'
+      ouContainer:  '${input.ou}'
+      password: '${input.password}'
+      confirmPassword: '${input.password}'
+      domainName: home.lab
