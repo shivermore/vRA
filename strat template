@@ -1,0 +1,131 @@
+name: Blank VM
+version: 1.2.0
+formatVersion: 1
+inputs:
+  count:
+    type: number
+    title: Number of Guests
+    default: 1
+    minimum: 1
+  function:
+    type: string
+    title: Functional ID
+    default: ac
+  network:
+    type: string
+    title: Network Type
+  flavor:
+    type: string
+    title: Size
+    default: small
+  ipv6:
+    type: boolean
+    title: Register IPv6?
+    default: true
+  location:
+    type: string
+    title: Location
+    default: C2F
+  zone:
+    type: string
+    title: Zone
+    default: Legacy
+  region:
+    type: string
+    title: Region
+  survivable:
+    type: boolean
+    title: Survivability Requirement?
+  networkApp:
+    type: string
+    title: Network Application
+    default: none
+  clusterType:
+    type: string
+    title: Cluster Type
+    default: none
+  storagePolicy:
+    type: string
+    title: Storage Policy
+    default: Storagepolicy:silver
+    oneOf:
+      - title: Silver (NetApp SAS or VSAN)
+        const: Storagepolicy:silver
+      - title: Gold (NetApp SSD or VSAN)
+        const: Storagepolicy:gold
+      - title: Bronze (NetApp SATA or VSAN)
+        const: Storagepolicy:bronze
+  disks:
+    type: array
+    minItems: 0
+    maxItems: 6
+    title: Additional Disks
+    description: Additional Disks
+    items:
+      type: object
+      properties:
+        size:
+          type: integer
+          title: Size (GB)
+          minSize: 1
+  bootDiskSize:
+    type: number
+    title: Boot Disk Size (GB)
+    description: The size in GB of the Boot Disk
+  spoofguard:
+    type: boolean
+    title: Disable Spoofguard
+    description: Deploys to networks with Spoofguard disabled.
+    default: false
+resources:
+  Cloud_vSphere_Disks:
+    type: Cloud.vSphere.Disk
+    allocatePerInstance: true
+    properties:
+      capacityGb: ${input.disks[count.index].size}
+      customName: Disk
+      iterator: ${count.index + 1}
+      count: ${length(input.disks)}
+  Cloud_vSphere_Machine_1:
+    type: Cloud.vSphere.Machine
+    preventDelete: true
+    properties:
+      customizeGuestOs: 'false'
+      awaitIp: 'false'
+      awaitHostName: 'false'
+      iterator: null
+      image: Blank Virtual Machine
+      count: ${input.count}
+      flavor: ${input.flavor}
+      region: ${input.region}
+      function: ${input.function}
+      adminDescription: _DO_NOT_SCHEDULE
+      net0.IPv6Disabled: ${!input.ipv6}
+      extensibility.getLocationId: 'false'
+      extensibility.advancedNetworking: 'true'
+      extensibility.validateHostnames: 'true'
+      extensibility.createArsComputer: 'true'
+      constraints:
+        - tag: Location:${input.location}
+        - tag: Zone:${input.zone}
+        - tag: '${input.survivable ? "cluster.survivable:yes" : "cluster.survivable:no"}'
+        - tag: '${input.clusterType == "cluster.type:" || input.clusterType == "none" ? "" : input.clusterType}'
+      networks:
+        - network: ${resource.Cloud_vSphere_Network_1.id}
+          assignment: static
+      attachedDisks: ${map_to_object(resource.Cloud_vSphere_Disks[*].id, "source")}
+      storage:
+        bootDiskCapacityInGB: ${input.bootDiskSize}
+        constraints:
+          - tag: ${input.storagePolicy}
+  Cloud_vSphere_Network_1:
+    type: Cloud.vSphere.Network
+    constraints:
+      - tag: network.type:${input.ipv6}
+      - tag: '${input.ipv6 == "none" || input.ipv6 == "network.app=" ? "" : input.ipv6}'
+    properties:
+      networkType: existing
+      constraints:
+        - tag: network.type:${input.network}
+        - tag: '${input.networkApp == "none" || input.networkApp == "network.app=" ? "" : input.networkApp}'
+        - tag: '${input.spoofguard ? "network.spoofguard:false" : ""}'
