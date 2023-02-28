@@ -1,0 +1,36 @@
+---
+runtime: "python3"
+code: |
+    import requests
+    import json
+    
+    # context.py is automatically added.
+    from context import getInput, setOutput
+    webhook_url = "https://hooks.slack.com/YOUR_SLACK_WEBHOOK_PATH"
+    message = getInput('message')
+    slack_message = {'text': message}
+    
+    # Does a post call with the slack message which is taken as imput in the task configuration
+    response = requests.post(
+        webhook_url, data=json.sumps(slack_message),
+        headers={'Content-Type': 'application/json'}
+    )
+    
+    # Sets the output with statusCode which will be displayed in task result page after execution
+    setOutput('statusCode', response.status_code)
+    if response.status_code != 200:
+        raise ValueError('Status code %s\nError message %s' %(response.status_code, response.text)
+    )
+inputProperties:      # enter fields for input selection of a task
+    - name: message
+      type: text
+      title: Message
+      placeHolder: Message for Slack Channel
+      defaultValue: Hello Slack
+      bindable: true
+      labelInfo: true
+      labelMessage: This message would be posed to the Slack channel
+outputProperties:     # enter fields that would display in the output section
+    - name: statusCode
+      type: label
+      title: Status Code
