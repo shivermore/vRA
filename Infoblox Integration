@@ -4,3 +4,16 @@ Name: Infoblox.IPAM.Network.dnsView
 Value: Internal Network
 
 The value needs to match the default name of ip/dns zone as listed in Infoblox ... Internal Network should be the default.
+
+
+
+Integrations > Infoblox > Key / Value pair settings
+
+Infoblox.IPAM.DisableCertificateCheck : True
+Infoblox.IPAM.WAPIVersion : 2.7
+Infoblox.IPAM.HTTPTimeout : 30
+Infoblox.IPAM.LogApiCallsAsInfo : False
+Infoblox.IPAM.NetworkContainerFiler : -
+Infoblox.IPAM.NetworkFiler : *DeviceType=Server
+Infoblox.IPAM.RangeFiler : *FS_Site=ignore
+Infoblox.IPAM.Network.dnsView : HOMELAB
