@@ -1,0 +1,42 @@
+formatVersion: 1
+inputs:
+  function:
+    type: string
+    title: Functional ID
+    description: Denotes the function of the new asset
+    default: aa
+    oneOf:
+      - title: My Favorate Server A
+        const: aa
+      - title: My Favorate Server B
+        const: ab
+  flavor:
+    type: string
+    title: CPU and Memory resource alloation
+    description: Enter the desired CPU and Memory
+    default: 1 CPU - 4 GB MEM
+    enum:
+      - 1 CPU - 4 GB MEM
+      - 2 CPU - 8 GB MEM
+resources:
+  Cloud_NSX_Network_1:
+    type: Cloud.NSX.Network
+    properties:
+      networkType: existing
+      constraints:
+        - tag: my-network-profile
+  Cloud_vSphere_Machine_1:
+    type: Cloud.vSphere.Machine
+    properties:
+      name:
+      image:
+      networks:
+        - network: ${resource.Cloud_NSX_Network_1.id}
+          assignment: static
+      activeDirectory:
+        finalRelativeDN: ${propgroup.vmFunction[input.function]}
+-------------
+
+Create a Property Group of type "Constant Values"
+Create new properties with a name equal to the input / function / const (i.e. name: aa / type: string / value: OU=path)
+create a new property for each functional id
